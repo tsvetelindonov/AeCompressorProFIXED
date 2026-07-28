@@ -7,29 +7,30 @@ on:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
 
-      - name: Setup Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v5
-
       - name: Configure Release build
-        run: cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
       - name: Build VST3
-        run: cmake --build build
+        run: cmake --build build --config Release --target AECompressor_VST3 -j 2
 
-      - name: Locate build plugin
+      - name: Locate built plugin
         shell: powershell
         run: |
-          Get-ChildItem -Path build -Recurse -Filter *.vst3
-          $plugin = Get-ChildItem -Path build -Recurse -Filter *.vst3 | Select-Object -First 1
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter "*.vst3" |
+                    Select-Object -First 1
+
           if (-not $plugin) {
+            Write-Host "Build contents:"
+            Get-ChildItem -Path build -Recurse
             throw "VST3 plugin was not found."
           }
+
           New-Item -ItemType Directory -Force -Path artifact
           Copy-Item $plugin.FullName -Destination artifact -Recurse -Force
 
